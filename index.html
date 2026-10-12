@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<title>Mob Swarm Anchor Edition</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%; width: 100%;
+    background: #0b1020; overflow: hidden;
+    overscroll-behavior: none; touch-action: none;
+    -webkit-user-select: none; user-select: none;
+    font-family: system-ui, sans-serif;
+  }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #stage { position: relative; width: 360px; height: 640px; }
+  /* Tilted CSS for the physics world */
+  #tilt { position: absolute; left: 0; width: 360px; height: 640px; bottom: 0; pointer-events: none; transform-origin: 50% 100%; }
+  #tilt canvas { pointer-events: none; width: 100%; height: 100%; display: block; }
+  /* Flat canvas for the HUD */
+  #hud { position: absolute; left: 0; top: 0; width: 360px; height: 640px; display: block; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stage">
+    <div id="tilt"><canvas id="game"></canvas></div>
+    <canvas id="hud"></canvas>
+  </div>
+</div>
+<script type="module">
+  import { AnchorLoop, State } from './lib/anchor-loop.js';
+  import { AnchorInput } from './lib/anchor-input.js';
+  import { createGame } from './src/mob-swarm.js';
+
+  const W = 360, H = 640;
+  const stage = document.getElementById('stage');
+  const canvas = document.getElementById('game');
+  const hudCanvas = document.getElementById('hud');
+  const tiltEl = document.getElementById('tilt');
+
+  // Resize scaling
+  function resize() {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const scale = Math.min(vw / W, vh / H);
+    const cw = Math.floor(W * scale), ch = Math.floor(H * scale);
+    stage.style.width = cw + 'px';
+    stage.style.height = ch + 'px';
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    const TRACK_Y = 640 * 0.85; // Cannon Y
+    const BASE_Y = 52;
+    const HUD_TOP = 58;
+    const BASE_H = 64;
+    const BASE_BOTTOM = BASE_Y + BASE_H;
+    
+    // Exact 3D math from v18
+    const TILT = 45, PERSP = 800, MAX_STRETCH = 1.9, WORLD_TOP = BASE_Y;
+    const k = cw / W, wh = TRACK_Y - WORLD_TOP, th = TILT * Math.PI / 180, cs = Math.cos(th), sn = Math.sin(th), P = PERSP;
+    const want = TRACK_Y - (HUD_TOP + BASE_H);
+    let stretch = 1;
+    if (TILT > 0) { const den = P * cs - want * sn; stretch = den > 1 ? want * P / den / wh : MAX_STRETCH; stretch = stretch < 1 ? 1 : (stretch > MAX_STRETCH ? MAX_STRETCH : stretch); }
+    const hl = wh * stretch;
+
+    tiltEl.style.width = cw + 'px'; tiltEl.style.height = (hl * k) + 'px'; tiltEl.style.bottom = ((H - TRACK_Y) * k) + 'px';
+    tiltEl.style.transform = 'perspective(' + (P * k) + 'px) rotateX(' + TILT + 'deg)';
+    
+    canvas.width = Math.floor(cw * dpr); canvas.height = Math.floor(hl * k * dpr);
+    hudCanvas.width = Math.floor(cw * dpr); hudCanvas.height = Math.floor(ch * dpr);
+    
+    // We update scaling dynamically inside the app if needed, but passing dpr scale is enough here.
+    return { cw, ch, hl, k, dpr, wh, WORLD_TOP };
+  }
+  
+  const dim = resize();
+  window.addEventListener('resize', () => resize());
+
+  // Set up contexts
+  const ctxGame = canvas.getContext('2d', { alpha: false });
+  const ctxHud = hudCanvas.getContext('2d');
+  
+  // Transform contexts just once for simplicity (mob-swarm didn't rebuild transform on every frame)
+  ctxGame.setTransform(canvas.width / W, 0, 0, canvas.height / dim.wh, 0, -dim.WORLD_TOP * canvas.height / dim.wh);
+  ctxHud.setTransform(hudCanvas.width / W, 0, 0, hudCanvas.height / H, 0, 0);
+
+  // Bind Anchor libraries
+  const input = new AnchorInput({ container: stage, width: W, height: H, steerFrac: 0.15, relative: false });
+  
+  let loop;
+  const game = createGame({ 
+    input, 
+    loop: { 
+      levelClear: () => loop && loop.levelClear(), 
+      gameOver: () => loop && loop.gameOver() 
+    },
+    ctxGame, 
+    ctxHud 
+  });
+
+  loop = new AnchorLoop({
+    update: (dt) => game.update(dt),
+    draw: (alpha) => game.draw(alpha),
+    maxDt: 1/20,
+    onState: (next, prev) => { if (next === State.LEVEL_CLEAR) { setTimeout(() => loop.start(), 1500); } }
+  });
+
+  loop.boot().start();
+</script>
+<script id="sw-register">
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    var hadController = !!navigator.serviceWorker.controller, reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!hadController || reloading) return;
+      reloading = true; location.reload();
+    });
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (reg) {
+        function activate(w) { if (w) w.postMessage('SKIP_WAITING'); }
+        activate(reg.waiting);
+        reg.addEventListener('updatefound', function () {
+          var w = reg.installing;
+          if (w) w.addEventListener('statechange', function () { if (w.state === 'installed' && navigator.serviceWorker.controller) activate(w); });
+        });
+        reg.update();
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) reg.update(); });
+      }).catch(function () {});
+    });
+  }
+</script>
+</body></html>
