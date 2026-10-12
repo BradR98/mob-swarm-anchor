@@ -21,9 +21,13 @@
   }
   #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
   #stage { position: relative; width: 360px; height: 640px; }
-  /* Tilted CSS for the physics world */
-  #tilt { position: absolute; z-index: 1; left: 0; width: 360px; height: 640px; bottom: 0; pointer-events: none; transform-origin: 50% 100%; }
-  #tilt canvas { pointer-events: none; width: 100%; height: 100%; display: block; }
+/* Logical Game Canvas */
+  #game {
+    position: absolute; left: 50%; bottom: 0;
+    transform-origin: 50% 100%; z-index: 1;
+    background-color: transparent;
+    pointer-events: none; display: block;
+  }
   
   #ui-overlay {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;
@@ -41,7 +45,7 @@
 <body>
 <div id="wrap">
   <div id="stage">
-    <div id="tilt"><canvas id="game"></canvas></div>
+    <canvas id="game"></canvas>
     <canvas id="hud"></canvas>
 
     <div id="ui-overlay">
@@ -65,7 +69,7 @@
   const stage = document.getElementById('stage');
   const canvas = document.getElementById('game');
   const hudCanvas = document.getElementById('hud');
-  const tiltEl = document.getElementById('tilt');
+  
 
   // Resize scaling
   function resize() {
@@ -90,8 +94,8 @@
     if (TILT > 0) { const den = P * cs - want * sn; stretch = den > 1 ? want * P / den / wh : MAX_STRETCH; stretch = stretch < 1 ? 1 : (stretch > MAX_STRETCH ? MAX_STRETCH : stretch); }
     const hl = wh * stretch;
 
-    tiltEl.style.width = cw + 'px'; tiltEl.style.height = (hl * k) + 'px'; tiltEl.style.bottom = ((H - TRACK_Y) * k) + 'px';
-    tiltEl.style.transform = 'perspective(' + (P * k) + 'px) rotateX(' + TILT + 'deg)';
+    canvas.style.width = cw + 'px'; canvas.style.height = (hl * k) + 'px'; canvas.style.bottom = ((H - TRACK_Y) * k) + 'px';
+    canvas.style.transform = 'translateX(-50%) perspective(' + (P * k) + 'px) rotateX(' + TILT + 'deg)';
     
     canvas.width = Math.floor(cw * dpr); canvas.height = Math.floor(hl * k * dpr);
     hudCanvas.width = Math.floor(cw * dpr); hudCanvas.height = Math.floor(ch * dpr);
@@ -104,7 +108,7 @@
   window.addEventListener('resize', () => resize());
 
   // Set up contexts
-  const ctxGame = canvas.getContext('2d', { alpha: false });
+  const ctxGame = canvas.getContext('2d');
   const ctxHud = hudCanvas.getContext('2d');
   
   // Transform contexts just once for simplicity (mob-swarm didn't rebuild transform on every frame)

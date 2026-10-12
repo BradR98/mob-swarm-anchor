@@ -1263,11 +1263,8 @@ export function createGame({ input, loop, rng, save, ctxGame, ctxHud }) {
   function render() {
     var i, k;
     ctx = wctx;
-    // Background
-    ctx.fillStyle = '#0b1020';
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#242a40';                          // letterbox: unused screen space is grayed out
-    ctx.fillRect(10, BASE_BOTTOM, W - 20, TRACK_Y - BASE_BOTTOM);
+    // Clear for transparency
+    ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = '#121a35';
     var ci, cActive = colOf(cannonX);
     for (ci = 0; ci < colN; ci++) {
