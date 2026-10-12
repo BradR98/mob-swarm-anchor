@@ -1462,58 +1462,34 @@ export function createGame({ input, loop, rng, save, ctxGame, ctxHud }) {
   }
 
   // Flat overlay (screen glass): trackpad strip, HUD text, base bar + HP, hit flash. Never tilted.
+  
+  var uiLevel = document.getElementById('ui-level');
+  var uiHpText = document.getElementById('ui-hp-text');
+  var uiHpFill = document.getElementById('ui-hp-bar-fill');
+  var uiHpBg = document.getElementById('ui-hp-bar-bg');
+
   function renderHud() {
     ctx = hctx;
     ctx.clearRect(0, 0, W, H);
-    var BY = baseScreenBottom - BASE_H; if (BY < HUD_TOP - 22) BY = HUD_TOP - 22;   // the base bar sits on the far edge of the runway
-    // Trackpad zone: dedicated thumb area, no game entity lives here
-    ctx.fillStyle = '#0d1430';
-    ctx.fillRect(0, TRACK_Y, W, TRACK_H);
-    ctx.fillStyle = 'rgba(255,255,255,0.10)';
-    ctx.font = '700 12px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('TRACKPAD  -  slide to aim, hold to fire', W / 2, TRACK_Y + TRACK_H / 2);
+    var BY = baseScreenBottom - BASE_H; if (BY < HUD_TOP - 22) BY = HUD_TOP - 22;
 
-    // HUD: level
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.font = '800 16px system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('LEVEL ' + level + ' / ' + MAX_LEVEL, 14, 26);
-    if (sandbox) {
-      ctx.fillStyle = '#7dffb0'; ctx.font = '800 11px system-ui, sans-serif';
-      ctx.fillText('PHYSICS SANDBOX  -  reds ' + redCount, 14, 42);
+    // Update DOM UI
+    if (uiLevel) {
+      uiLevel.innerText = 'LEVEL ' + level + ' / ' + MAX_LEVEL + (isBossLevel ? ' [BOSS]' : '');
     }
-    if (isBossLevel) {
-      ctx.fillStyle = '#ff6a78';
-      ctx.font = '800 11px system-ui, sans-serif';
-      ctx.fillText('BOSS', 14, 42);
+    if (uiHpText && uiHpFill) {
+      var showHP = isBossLevel ? bossHP : baseHP, showMax = isBossLevel ? bossMaxHP : baseMaxHP;
+      uiHpText.innerText = (isBossLevel ? 'BOSS ' + fmt(bossActive ? bossHP : bossMaxHP) : fmt(baseHP) + ' HP');
+      uiHpFill.style.width = (((bossActive || !isBossLevel ? showHP : showMax) / showMax) * 100) + '%';
+      uiHpFill.style.backgroundColor = isBossLevel ? '#ff9a3c' : '#7dff9a';
     }
+
+    // Powerup text
     if (powerLeft > 0) {
       ctx.fillStyle = '#ffd36a'; ctx.font = '800 13px system-ui, sans-serif'; ctx.textAlign = 'right';
       ctx.fillText(Armory[powerName].name.toUpperCase() + ' ' + powerLeft.toFixed(1) + 's', W - 14, 26);
       ctx.textAlign = 'left';
     }
-
-    // Opponent base. Damage flicker: strobes and shakes in proportion to the recent hit rate
-    var heatMix = baseHeat * (0.5 + 0.5 * Math.sin(clock * 55));
-    var shake = Math.sin(clock * 90) * baseHeat * 2;
-    ctx.fillStyle = 'rgb(' + ((216 + 39 * heatMix) | 0) + ',' + ((58 + 80 * heatMix) | 0) + ',' + ((74 + 64 * heatMix) | 0) + ')';
-    roundRect(10 + shake, BY, W - 20, BASE_H, 14);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.font = '700 28px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    var showHP = isBossLevel ? bossHP : baseHP, showMax = isBossLevel ? bossMaxHP : baseMaxHP;
-    ctx.fillText(isBossLevel ? 'BOSS ' + fmt(bossActive ? bossHP : bossMaxHP) : fmt(baseHP) + ' HP', W / 2 + shake, BY + BASE_H / 2 - 6);
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.fillRect(30, BY + BASE_H - 14, W - 60, 6);
-    if (!isBossLevel) {
-      ctx.fillStyle = '#ffe27a';                       // chip-damage trail
-      ctx.fillRect(30, BY + BASE_H - 14, (W - 60) * (ghostHP / showMax), 6);
-    }
-    ctx.fillStyle = isBossLevel ? '#ff9a3c' : '#7dff9a';
-    ctx.fillRect(30, BY + BASE_H - 14, (W - 60) * ((bossActive || !isBossLevel ? showHP : showMax) / showMax), 6);
 
     // Screen flash when the cannon is hit
     if (cannonFlash > 0) {
@@ -1522,7 +1498,6 @@ export function createGame({ input, loop, rng, save, ctxGame, ctxHud }) {
     }
   }
 
-  
   return {
     update: function(dt) {
       update(dt);

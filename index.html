@@ -22,8 +22,18 @@
   #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
   #stage { position: relative; width: 360px; height: 640px; }
   /* Tilted CSS for the physics world */
-  #tilt { position: absolute; left: 0; width: 360px; height: 640px; bottom: 0; pointer-events: none; transform-origin: 50% 100%; }
+  #tilt { position: absolute; z-index: 1; left: 0; width: 360px; height: 640px; bottom: 0; pointer-events: none; transform-origin: 50% 100%; }
   #tilt canvas { pointer-events: none; width: 100%; height: 100%; display: block; }
+  
+  #ui-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;
+    pointer-events: none; box-sizing: border-box; padding: 14px;
+  }
+  #ui-level { position: absolute; top: 14px; left: 14px; font-weight: 800; font-size: 16px; color: rgba(255,255,255,0.85); text-align: left; }
+  #ui-hp-wrapper { position: absolute; top: 14px; left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
+  #ui-hp-text { font-weight: 700; font-size: 16px; color: #fff; margin-bottom: 6px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+  #ui-hp-bar-bg { width: 140px; height: 6px; background: rgba(0,0,0,0.35); border-radius: 3px; overflow: hidden; }
+  #ui-hp-bar-fill { height: 100%; background: #7dff9a; width: 100%; transition: width 0.1s linear, background-color 0.2s; }
   /* Flat canvas for the HUD */
   #hud { position: absolute; left: 0; top: 0; width: 360px; height: 640px; display: block; }
 </style>
@@ -33,12 +43,23 @@
   <div id="stage">
     <div id="tilt"><canvas id="game"></canvas></div>
     <canvas id="hud"></canvas>
+
+    <div id="ui-overlay">
+      <div id="ui-level">LEVEL 1 / 100</div>
+      <div id="ui-hp-wrapper">
+        <div id="ui-hp-text">250 HP</div>
+        <div id="ui-hp-bar-bg"><div id="ui-hp-bar-fill"></div></div>
+      </div>
+    </div>
+
   </div>
 </div>
 <script type="module">
   import { AnchorLoop, State } from './lib/anchor-loop.js';
   import { AnchorInput } from './lib/anchor-input.js';
   import { createGame } from './src/mob-swarm.js';
+  import { createAudio } from './lib/anchor-audio.js';
+  import { createControls } from './lib/anchor-ui.js';
 
   const W = 360, H = 640;
   const stage = document.getElementById('stage');
@@ -93,7 +114,11 @@
   // Bind Anchor libraries
   const input = new AnchorInput({ container: stage, width: W, height: H, steerFrac: 0.15, relative: false });
   
+  
+  const audio = createAudio();
+  
   let loop;
+
   const game = createGame({ 
     input, 
     loop: { 
@@ -104,11 +129,16 @@
     ctxHud 
   });
 
+  const ui = createControls({ stage, loop: { togglePause: () => loop && loop.togglePause(), state: State.START }, audio });
   loop = new AnchorLoop({
     update: (dt) => game.update(dt),
     draw: (alpha) => game.draw(alpha),
     maxDt: 1/20,
-    onState: (next, prev) => { if (next === State.LEVEL_CLEAR) { setTimeout(() => loop.start(), 1500); } }
+    onState: (next, prev) => { 
+      ui.loop.state = next;
+      ui.sync();
+      if (next === State.LEVEL_CLEAR) { setTimeout(() => loop.start(), 1500); } 
+    }
   });
 
   loop.boot().start();
