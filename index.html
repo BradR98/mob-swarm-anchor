@@ -134,7 +134,7 @@
     maxDt: 1/20,
     onState: (next, prev) => { 
       ui.sync();
-      if (next === State.LEVEL_CLEAR) { setTimeout(() => loop.start(), 1500); } 
+      if (next === State.LEVEL_CLEAR || next === State.GAMEOVER) { setTimeout(() => { game.restart(); loop.start(); }, 1500); } 
     }
   });
 

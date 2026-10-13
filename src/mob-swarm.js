@@ -513,7 +513,7 @@ export function createGame({ input, loop, rng, save, ctxGame }) {
   var state = PLAYING;
   var level = 1;                                   // level number, 1-based
   var isBossLevel = false;
-  var baseMaxHP = 1200, baseHP = 1200;
+  var baseMaxHP = 250, baseHP = 250;
   var bossDir = 1, bossWave = 10, bossInterval = 4;
   var bossActive = false, bossMaxHP = 0, bossHP = 0, bossX = W / 2, bossY = 0, bossSpeed = 0, bossHeat = 0;
   var cannonHP = CANNON_MAX_HP;
@@ -529,7 +529,7 @@ export function createGame({ input, loop, rng, save, ctxGame }) {
   var cannonX = W / 2, targetX = W / 2; function getTargetX() { return input.getX(); }
   var fireAcc = 0, fireCount = 0;
   var redTimer = 3;
-  var baseHeat = 0, ghostHP = 1200, cannonFlash = 0;   // baseHeat: damage flicker; ghostHP: chip-damage trail
+  var baseHeat = 0, ghostHP = 250, cannonFlash = 0;   // baseHeat: damage flicker; ghostHP: chip-damage trail
   var gateFlash = new Float32Array(MAX_GATES);
   var blueCX = W / 2, blueN = 0;           // blue centroid from previous frame
   var autoFire = true, spawnerOn = true;   // toggled only by debug hooks
@@ -619,6 +619,7 @@ export function createGame({ input, loop, rng, save, ctxGame }) {
     var L = generateLevel(level);
     sandbox = !!L.sandbox; sandAcc = 0;
     setColumns(L.cols);
+    if (input && input.setBounds) input.setBounds(AX0 + 10, AX1 - 10);   // cannon/muzzle stay inside the active lane span (v18 clamp)
     mobCount = 0; redCount = 0;
     isBossLevel = L.isBoss;
     baseMaxHP = L.baseHP; baseHP = baseMaxHP; baseHit = L.baseHit || 1;
@@ -1487,7 +1488,12 @@ export function createGame({ input, loop, rng, save, ctxGame }) {
     if (uiFlash) uiFlash.style.opacity = cannonFlash > 0 ? (cannonFlash * 0.28).toFixed(3) : '0';
   }
 
+  reset();   // v18 bootstrap: load the current level (lanes, base HP, obstacles) before the first frame
+  cannonX = input.getX(); targetX = cannonX;
+
   return {
+    restart: onRestart,
+    debug: function () { return { cannonX: cannonX, mobCount: mobCount, mx: Array.prototype.slice.call(mx, 0, mobCount), baseHP: baseHP, AX0: AX0, AX1: AX1, colX0: Array.prototype.slice.call(colX0, 0, colN), colX1: Array.prototype.slice.call(colX1, 0, colN) }; },
     update: function(dt) {
       update(dt);
     },

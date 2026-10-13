@@ -1,5 +1,14 @@
 # Changelog
 
+## [v18.2.1] (MS2-BUGFIX-ENTITY-COORDINATES)
+- Root cause: the Anchor port dropped v18's bootstrap `reset()`, so lane spans (`colX0/colX1`, `AX0/AX1`) were never initialised. Muzzle X clamped into an empty lane (bullets on the left rail) and base HP stayed at its placeholder.
+- Bullets: muzzle X is derived from the cannon's current X, clamped to the active lane, now that lanes exist. Mobs/bullets/lanes share one logical 360x640 space with the track drawn on the canvas, so resizing (a CSS/canvas-size change only) cannot cause drift.
+- Input: `AnchorInput` bounds are set to the lane span (AX0+10 .. AX1-10) on every level load, restoring the v18 clamp.
+- Base HP: initial value 1200 -> 250; `reset()` loads the generated level HP (L1 = 250).
+- Win/lose now call `game.restart()` (next level / retry) before `loop.start()`.
+- Added `game.debug()` snapshot for headless checks.
+
+
 ## [v18.2.0] (MS2-ONE-SHOT-RENDER-UNIFICATION)
 - Single Canvas: removed the flat `#hud` canvas; the field is exactly one `<canvas id="game">` (grey track bed, lanes, gates, mobs, bullets, cannon and the opponent base are all drawn via Canvas 2D).
 - Global transform: `perspective(...) rotateX(45deg)` plus the up-to-1.9x stretch is applied only to that canvas, centered with `left:50%`.
