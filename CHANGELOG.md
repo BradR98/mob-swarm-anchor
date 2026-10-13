@@ -1,5 +1,9 @@
 # Changelog
 
+## [v18.3.1] (MS2-REMOVE-GREEN-HP-BAR)
+- Removed the green HP bar (`#ui-hp-bar-bg` / `#ui-hp-bar-fill`) and its CSS and updater code from the `#ui-overlay`. No other overlay element, position or style was changed.
+
+
 ## [v18.3.0] (MS2-STATE-TRANSITIONS-AND-UI)
 - State machine: new `READY` state (and a named `TRANSITION` interlude, the former WON state) in `src/mob-swarm.js`. `reset()` now loads a level into `READY`; `update()` runs only in `PLAYING`, while `draw()` keeps rendering track, stationary cannon and base. `game.begin()` leaves READY; `getPhase()`/`getLevel()` exposed.
 - Page boot no longer auto-starts: `AnchorLoop` stays in START (draw only) until a button is pressed.

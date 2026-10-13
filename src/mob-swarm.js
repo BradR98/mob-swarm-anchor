@@ -1483,18 +1483,14 @@ export function createGame({ input, loop, rng, save, ctxGame, startLevel }) {
   
   var uiLevel = document.getElementById('ui-level');
   var uiHpText = document.getElementById('ui-hp-text');
-  var uiHpFill = document.getElementById('ui-hp-bar-fill');
-  var uiHpBg = document.getElementById('ui-hp-bar-bg');
 
   var uiPower = document.getElementById('ui-power');
   var uiFlash = document.getElementById('ui-flash');
   function renderHud() {
     if (uiLevel) uiLevel.innerText = 'LEVEL ' + level + ' / ' + MAX_LEVEL;
-    if (uiHpText && uiHpFill) {
+    if (uiHpText) {
       var showHP = isBossLevel ? bossHP : baseHP, showMax = isBossLevel ? bossMaxHP : baseMaxHP;
       uiHpText.innerText = (isBossLevel ? 'BOSS ' + fmt(bossActive ? bossHP : bossMaxHP) : fmt(baseHP) + ' HP');
-      uiHpFill.style.width = (((bossActive || !isBossLevel ? showHP : showMax) / showMax) * 100) + '%';
-      uiHpFill.style.backgroundColor = isBossLevel ? '#ff9a3c' : '#7dff9a';
     }
     if (uiPower) uiPower.innerText = powerLeft > 0 ? Armory[powerName].name.toUpperCase() + ' ' + powerLeft.toFixed(1) + 's' : '';
     if (uiFlash) uiFlash.style.opacity = cannonFlash > 0 ? (cannonFlash * 0.28).toFixed(3) : '0';
