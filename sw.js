@@ -1,4 +1,4 @@
-var CACHE_NAME = 'mob-swarm-anchor-v1';
+var CACHE_NAME = 'mob-swarm-anchor-v3';
 var ASSETS = [
   './', 
   './index.html', 

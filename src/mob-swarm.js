@@ -2,7 +2,7 @@
 import { State } from '../lib/anchor-loop.js';
 import { loadState, saveState, clearState } from '../lib/anchor-save.js';
 
-export function createGame({ input, loop, rng, save, ctxGame, ctxHud }) {
+export function createGame({ input, loop, rng, save, ctxGame }) {
 
 
   // ---------- Config (logical portrait space) ----------
@@ -536,7 +536,7 @@ export function createGame({ input, loop, rng, save, ctxGame, ctxHud }) {
 
   var canvas = { width: 360, height: 640 };
   var wctx = ctxGame;          // world canvas (tilted)
-  var hudCanvas = { width: 360, height: 640 }, hctx = ctxHud;   // flat overlay: HUD, base bar, trackpad, flash
+  var hudCanvas = { width: 360, height: 640 };   // legacy stub (no flat canvas any more)
   var tiltEl = { style: {} };
   var ctx = wctx;                                                // render() swaps this between the two canvases
   // Perspective (locked to the approved preview): world canvas tilted 45deg about its bottom edge, 800px perspective, up to 1.9x vertical stretch
@@ -578,7 +578,6 @@ export function createGame({ input, loop, rng, save, ctxGame, ctxHud }) {
     canvas.width = Math.floor(cw * dpr); canvas.height = Math.floor(hl * k * dpr);
     wctx.setTransform(canvas.width / W, 0, 0, canvas.height / wh, 0, -WORLD_TOP * canvas.height / wh);
     hudCanvas.width = Math.floor(cw * dpr); hudCanvas.height = Math.floor(ch * dpr);
-    hctx.setTransform(hudCanvas.width / W, 0, 0, hudCanvas.height / H, 0, 0);
   }
   // addEventListener('resize', resize);
   // addEventListener('orientationchange', resize);
@@ -1265,6 +1264,8 @@ export function createGame({ input, loop, rng, save, ctxGame, ctxHud }) {
     ctx = wctx;
     // Clear for transparency
     ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#242a40';                          // grey track bed
+    ctx.fillRect(10, BASE_BOTTOM, W - 20, TRACK_Y - BASE_BOTTOM);
     ctx.fillStyle = '#121a35';
     var ci, cActive = colOf(cannonX);
     for (ci = 0; ci < colN; ci++) {
@@ -1302,6 +1303,13 @@ export function createGame({ input, loop, rng, save, ctxGame, ctxHud }) {
     ctx.moveTo(10, CANNON_Y); ctx.lineTo(W - 10, CANNON_Y);
     ctx.stroke();
     ctx.setLineDash([]);
+
+    // Opponent base: drawn on the unified canvas at the far end of the track (tilts with the world)
+    var heatMix = baseHeat * (0.5 + 0.5 * Math.sin(clock * 55));
+    var shake = Math.sin(clock * 90) * baseHeat * 2;
+    ctx.fillStyle = 'rgb(' + ((216 + 39 * heatMix) | 0) + ',' + ((58 + 80 * heatMix) | 0) + ',' + ((74 + 64 * heatMix) | 0) + ')';
+    roundRect(10 + shake, BASE_Y, W - 20, BASE_H, 14);
+    ctx.fill();
 
     // Black holes (rotating swirl)
     for (i = 0; i < holeCount; i++) {
@@ -1465,34 +1473,18 @@ export function createGame({ input, loop, rng, save, ctxGame, ctxHud }) {
   var uiHpFill = document.getElementById('ui-hp-bar-fill');
   var uiHpBg = document.getElementById('ui-hp-bar-bg');
 
+  var uiPower = document.getElementById('ui-power');
+  var uiFlash = document.getElementById('ui-flash');
   function renderHud() {
-    ctx = hctx;
-    ctx.clearRect(0, 0, W, H);
-    var BY = baseScreenBottom - BASE_H; if (BY < HUD_TOP - 22) BY = HUD_TOP - 22;
-
-    // Update DOM UI
-    if (uiLevel) {
-      uiLevel.innerText = 'LEVEL ' + level + ' / ' + MAX_LEVEL + (isBossLevel ? ' [BOSS]' : '');
-    }
+    if (uiLevel) uiLevel.innerText = 'LEVEL ' + level + ' / ' + MAX_LEVEL + (isBossLevel ? ' [BOSS]' : '');
     if (uiHpText && uiHpFill) {
       var showHP = isBossLevel ? bossHP : baseHP, showMax = isBossLevel ? bossMaxHP : baseMaxHP;
       uiHpText.innerText = (isBossLevel ? 'BOSS ' + fmt(bossActive ? bossHP : bossMaxHP) : fmt(baseHP) + ' HP');
       uiHpFill.style.width = (((bossActive || !isBossLevel ? showHP : showMax) / showMax) * 100) + '%';
       uiHpFill.style.backgroundColor = isBossLevel ? '#ff9a3c' : '#7dff9a';
     }
-
-    // Powerup text
-    if (powerLeft > 0) {
-      ctx.fillStyle = '#ffd36a'; ctx.font = '800 13px system-ui, sans-serif'; ctx.textAlign = 'right';
-      ctx.fillText(Armory[powerName].name.toUpperCase() + ' ' + powerLeft.toFixed(1) + 's', W - 14, 26);
-      ctx.textAlign = 'left';
-    }
-
-    // Screen flash when the cannon is hit
-    if (cannonFlash > 0) {
-      ctx.fillStyle = 'rgba(255,40,60,' + (cannonFlash * 0.28).toFixed(3) + ')';
-      ctx.fillRect(0, 0, W, H);
-    }
+    if (uiPower) uiPower.innerText = powerLeft > 0 ? Armory[powerName].name.toUpperCase() + ' ' + powerLeft.toFixed(1) + 's' : '';
+    if (uiFlash) uiFlash.style.opacity = cannonFlash > 0 ? (cannonFlash * 0.28).toFixed(3) : '0';
   }
 
   return {
