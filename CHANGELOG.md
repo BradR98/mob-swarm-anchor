@@ -1,5 +1,11 @@
 # Changelog
 
+## [v18.2.2] (MS2-BUGFIX-HQ-AND-BOSS-RENDER)
+- HQ HP text: the unified-canvas port dropped the base's `ctx.fillText`. It is restored in `render()` right after the red base rect, with explicit `fillStyle '#fff'`, `font`, `textAlign`/`textBaseline`, plus the green HP bar under it. Redundant DOM HP text hidden (bar stays in the overlay).
+- Boss: the draw code was intact, in the correct order (after track and base, no missing globals). Hardened its HP label with explicit `textAlign`/`textBaseline`; on boss levels the HQ text is skipped so the mothership's own HP readout isn't covered by it.
+- Dev aids: `?level=N` warps to a level; `#boss` forces the mothership to appear immediately.
+
+
 ## [v18.2.1] (MS2-BUGFIX-ENTITY-COORDINATES)
 - Root cause: the Anchor port dropped v18's bootstrap `reset()`, so lane spans (`colX0/colX1`, `AX0/AX1`) were never initialised. Muzzle X clamped into an empty lane (bullets on the left rail) and base HP stayed at its placeholder.
 - Bullets: muzzle X is derived from the cannon's current X, clamped to the active lane, now that lanes exist. Mobs/bullets/lanes share one logical 360x640 space with the track drawn on the canvas, so resizing (a CSS/canvas-size change only) cannot cause drift.

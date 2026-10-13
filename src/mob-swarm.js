@@ -2,7 +2,7 @@
 import { State } from '../lib/anchor-loop.js';
 import { loadState, saveState, clearState } from '../lib/anchor-save.js';
 
-export function createGame({ input, loop, rng, save, ctxGame }) {
+export function createGame({ input, loop, rng, save, ctxGame, startLevel }) {
 
 
   // ---------- Config (logical portrait space) ----------
@@ -1311,6 +1311,17 @@ export function createGame({ input, loop, rng, save, ctxGame }) {
     ctx.fillStyle = 'rgb(' + ((216 + 39 * heatMix) | 0) + ',' + ((58 + 80 * heatMix) | 0) + ',' + ((74 + 64 * heatMix) | 0) + ')';
     roundRect(10 + shake, BASE_Y, W - 20, BASE_H, 14);
     ctx.fill();
+    if (!isBossLevel) {   // boss levels: the mothership carries its own HP readout; the shielded base stays plain
+      // HQ HP text: drawn AFTER the base rect, with explicit contrasting style (never inherits the red fill)
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 28px system-ui, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(fmt(baseHP) + ' HP', W / 2 + shake, BASE_Y + BASE_H / 2 - 6);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(30, BASE_Y + BASE_H - 14, W - 60, 6);
+      ctx.fillStyle = '#7dff9a';
+      ctx.fillRect(30, BASE_Y + BASE_H - 14, (W - 60) * (baseMaxHP > 0 ? baseHP / baseMaxHP : 0), 6);
+    }
 
     // Black holes (rotating swirl)
     for (i = 0; i < holeCount; i++) {
@@ -1421,7 +1432,7 @@ export function createGame({ input, loop, rng, save, ctxGame }) {
       ctx.fillStyle = '#200';
       ctx.beginPath(); ctx.arc(bossX - 21, bossY - 3, 3, 0, 6.2832); ctx.arc(bossX + 21, bossY - 3, 3, 0, 6.2832); ctx.fill();
       ctx.fillStyle = '#fff';
-      ctx.font = '800 14px system-ui, sans-serif';
+      ctx.font = '800 14px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(fmt(bossHP), bossX, bossY + 17);
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
       ctx.fillRect(bx0 + 10, by0 - 9, BOSS_W - 20, 5);
@@ -1477,7 +1488,7 @@ export function createGame({ input, loop, rng, save, ctxGame }) {
   var uiPower = document.getElementById('ui-power');
   var uiFlash = document.getElementById('ui-flash');
   function renderHud() {
-    if (uiLevel) uiLevel.innerText = 'LEVEL ' + level + ' / ' + MAX_LEVEL + (isBossLevel ? ' [BOSS]' : '');
+    if (uiLevel) uiLevel.innerText = 'LEVEL ' + level + ' / ' + MAX_LEVEL;
     if (uiHpText && uiHpFill) {
       var showHP = isBossLevel ? bossHP : baseHP, showMax = isBossLevel ? bossMaxHP : baseMaxHP;
       uiHpText.innerText = (isBossLevel ? 'BOSS ' + fmt(bossActive ? bossHP : bossMaxHP) : fmt(baseHP) + ' HP');
@@ -1488,11 +1499,13 @@ export function createGame({ input, loop, rng, save, ctxGame }) {
     if (uiFlash) uiFlash.style.opacity = cannonFlash > 0 ? (cannonFlash * 0.28).toFixed(3) : '0';
   }
 
+  if (startLevel > 0) level = startLevel | 0;   // dev warp (?level=N)
   reset();   // v18 bootstrap: load the current level (lanes, base HP, obstacles) before the first frame
   cannonX = input.getX(); targetX = cannonX;
 
   return {
     restart: onRestart,
+    forceBoss: function () { if (isBossLevel && !bossActive) spawnBoss(); },
     debug: function () { return { cannonX: cannonX, mobCount: mobCount, mx: Array.prototype.slice.call(mx, 0, mobCount), baseHP: baseHP, AX0: AX0, AX1: AX1, colX0: Array.prototype.slice.call(colX0, 0, colN), colX1: Array.prototype.slice.call(colX1, 0, colN) }; },
     update: function(dt) {
       update(dt);
