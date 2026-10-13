@@ -84,7 +84,8 @@ export function createGame({ input, loop, rng, save, ctxGame, startLevel }) {
   var HOLE_R = 80 * ES, HOLE_CORE = 10 * ES, HOLE_G = 480;    // black hole pull radius / kill radius / pull accel
   var FLAG_BUMPED = 128;
 
-  var PLAYING = 0, WON = 1, LOST = 2;
+  var PLAYING = 0, WON = 1, LOST = 2, READY = 3;
+  var TRANSITION = WON;   // 'Level Complete' interlude: HQ destroyed, update() frozen until the next level is loaded
 
   // ---------- Procedural level generator ----------
   // Seeded PRNG: level N always generates the same board.
@@ -629,7 +630,7 @@ export function createGame({ input, loop, rng, save, ctxGame, startLevel }) {
     bossSpeed = BOSS_STRAFE * L.redSpeedMul; bossDir = 1; bossX = (AX0 + AX1) / 2; bossY = BASE_Y + BOSS_H / 2 + 20;
     cannonX = targetX = (AX0 + AX1) / 2;
     bossWave = Math.max(3, Math.min(12, Math.round(L.waveMin * 0.35 * BOSS_WAVE_K))); bossInterval = Math.max(8, 12 - L.tier * 0.2) * BOSS_INT_K;   // smaller waves, slower cadence than any level
-    state = PLAYING;
+    state = READY;   // lanes/HP/obstacles loaded, but nothing moves until begin() (Start Game / Let's Go)
     fireAcc = 0; fireCount = 0;
     redTimer = 2;                                        // short grace period before the first wave / the boss
     waveQueue = 0; waveCursor = 0; for (var wc = 0; wc < MAX_COLS; wc++) { wq[wc] = 0; pa[wc] = 0; }
@@ -1505,6 +1506,9 @@ export function createGame({ input, loop, rng, save, ctxGame, startLevel }) {
 
   return {
     restart: onRestart,
+    begin: function () { if (state === READY) state = PLAYING; },
+    getLevel: function () { return level; },
+    getPhase: function () { return state === READY ? 'READY' : (state === PLAYING ? 'PLAYING' : (state === TRANSITION ? 'TRANSITION' : 'LOST')); },
     forceBoss: function () { if (isBossLevel && !bossActive) spawnBoss(); },
     debug: function () { return { cannonX: cannonX, mobCount: mobCount, mx: Array.prototype.slice.call(mx, 0, mobCount), baseHP: baseHP, AX0: AX0, AX1: AX1, colX0: Array.prototype.slice.call(colX0, 0, colN), colX1: Array.prototype.slice.call(colX1, 0, colN) }; },
     update: function(dt) {

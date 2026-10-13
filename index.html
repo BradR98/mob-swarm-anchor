@@ -33,6 +33,10 @@
     position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;
     pointer-events: none; box-sizing: border-box; padding: 14px;
   }
+  #ui-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; pointer-events: none; }
+  #ui-banner { display: none; font-weight: 900; font-size: 30px; letter-spacing: 2px; color: #7dff9a; text-shadow: 0 3px 10px rgba(0,0,0,0.7); text-align: center; }
+  .ui-btn { display: none; pointer-events: auto; cursor: pointer; font: 800 22px system-ui, sans-serif; color: #0b1020; background: #7dff9a; border: none; border-radius: 14px; padding: 16px 38px; box-shadow: 0 6px 18px rgba(0,0,0,0.5); touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .ui-btn:active { transform: scale(0.96); }
   #ui-level { position: absolute; top: 16px; left: 72px; font-weight: 800; font-size: 11px; color: rgba(255,255,255,0.85); text-align: left; }
   #ui-hp-wrapper { position: absolute; top: 14px; left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
   #ui-hp-text { display: none; font-weight: 700; font-size: 16px; color: #fff; margin-bottom: 6px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
@@ -50,6 +54,7 @@
     <div id="ui-overlay">
       <div id="ui-flash"></div>
       <div id="ui-power"></div>
+      <div id="ui-center"><div id="ui-banner">LEVEL COMPLETE</div><button id="ui-start" class="ui-btn" type="button">Start Game</button></div>
       <div id="ui-level">LEVEL 1 / 100</div>
       <div id="ui-hp-wrapper">
         <div id="ui-hp-text">250 HP</div>
@@ -133,14 +138,38 @@
     update: (dt) => game.update(dt),
     draw: (alpha) => game.draw(alpha),
     maxDt: 1/20,
-    onState: (next, prev) => { 
+    onState: (next, prev) => {
       ui.sync();
-      if (next === State.LEVEL_CLEAR || next === State.GAMEOVER) { setTimeout(() => { game.restart(); loop.start(); }, 1500); } 
+      if (next === State.LEVEL_CLEAR) showBanner('LEVEL COMPLETE', 2000);
+      else if (next === State.GAMEOVER) showBanner('DEFEAT', 1500);
     }
   });
 
+  // READY / TRANSITION flow (flat DOM overlay, never inside the tilted canvas)
+  const startBtn = document.getElementById('ui-start'), banner = document.getElementById('ui-banner');
+  function showReady() {
+    startBtn.textContent = game.getLevel() > 1 ? "Let's Go" : 'Start Game';
+    startBtn.style.display = 'block';
+  }
+  function showBanner(text, ms) {
+    banner.textContent = text; banner.style.display = 'block';
+    setTimeout(() => {
+      banner.style.display = 'none';
+      game.restart();   // win: next level, loss: same level; either way the new level loads in READY
+      showReady();
+    }, ms);
+  }
+  startBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+  startBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    startBtn.style.display = 'none';
+    game.begin();
+    loop.start();
+  });
+
   if (location.hash === '#boss') setTimeout(() => game.forceBoss(), 300);
-  loop.boot().start();
+  loop.boot();   // START: draw() only, update() is bypassed until the button is pressed
+  showReady();
 </script>
 <script id="sw-register">
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {

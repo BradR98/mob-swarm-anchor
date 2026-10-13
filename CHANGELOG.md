@@ -1,5 +1,13 @@
 # Changelog
 
+## [v18.3.0] (MS2-STATE-TRANSITIONS-AND-UI)
+- State machine: new `READY` state (and a named `TRANSITION` interlude, the former WON state) in `src/mob-swarm.js`. `reset()` now loads a level into `READY`; `update()` runs only in `PLAYING`, while `draw()` keeps rendering track, stationary cannon and base. `game.begin()` leaves READY; `getPhase()`/`getLevel()` exposed.
+- Page boot no longer auto-starts: `AnchorLoop` stays in START (draw only) until a button is pressed.
+- Start buttons: flat `#ui-overlay` button (`pointer-events:auto`; wrapper stays `none`): "Start Game" on Level 1, "Let's Go" on Level 2+ (and retries past L1). Click hides it, calls `game.begin()` + `loop.start()`.
+- Success banner: HQ/boss HP 0 -> TRANSITION -> "LEVEL COMPLETE" in the overlay; after 2000ms it hides, the level increments and the next level loads in READY. Defeat shows "DEFEAT" for 1500ms then reloads the same level in READY.
+- Service worker cache bumped to v6.
+
+
 ## [v18.2.2] (MS2-BUGFIX-HQ-AND-BOSS-RENDER)
 - HQ HP text: the unified-canvas port dropped the base's `ctx.fillText`. It is restored in `render()` right after the red base rect, with explicit `fillStyle '#fff'`, `font`, `textAlign`/`textBaseline`, plus the green HP bar under it. Redundant DOM HP text hidden (bar stays in the overlay).
 - Boss: the draw code was intact, in the correct order (after track and base, no missing globals). Hardened its HP label with explicit `textAlign`/`textBaseline`; on boss levels the HQ text is skipped so the mothership's own HP readout isn't covered by it.
